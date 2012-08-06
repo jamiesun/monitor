@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #coding:utf-8
-from twisted.internet.protocol import ConnectedDatagramProtocol
+from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 import json
 import zlib
@@ -11,7 +11,7 @@ class Montior():
         pass
 
 
-class EchoClientDatagramProtocol(ConnectedDatagramProtocol):
+class EchoClientDatagramProtocol(DatagramProtocol):
     strings = [
         "Hello, world!00000000000000000000000000000000000",
         "What a fine day it is.0000000000000000000000000000000000",
@@ -20,8 +20,6 @@ class EchoClientDatagramProtocol(ConnectedDatagramProtocol):
         "Bye-bye!0000000000000000000000000000",
         "Bye-bye!0000000000000000000000000000"
     ]
-    def connectionMade(self):
-        self.setTimeout(3)
 
     def startProtocol(self):
         self.transport.connect('127.0.0.1', 9000)
@@ -46,8 +44,6 @@ class EchoClientDatagramProtocol(ConnectedDatagramProtocol):
         time.sleep(2)
         self.sendDatagram()
 
-    def connectionFailed(self, failure):
-        print 'failure %s'%failure
 
 
 
