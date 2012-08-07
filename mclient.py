@@ -5,50 +5,58 @@ from twisted.internet import reactor
 import json
 import zlib
 import time
+import os
 
-class Montior():
-    def get_cpu_state():
-        pass
+def pack_data(dtype,dataobj):
+    data = dict(authkey="lymonitor",type=dtype,value=dataobj)
+    return zlib.compress(json.dumps(data))
+
+def get_uptime():
+    cout = os.popen("uptime | awk '{print $3,$8,$9,$10}'" )
+    data = [st.strip() for st in cout.read().split(",")]
+    return pack_data("uptime",data)
+
+def get_disk_usage():
+    disks = []
+    cout = os.popen("df -h | awk '$(NF-1)~/\%/ && $NF~/\// {print $NF,$(NF-1)}'" )
+    for line in  cout.read().strip().splitlines():
+        obj = line.split()
+        if len(obj) == 2:
+            disks.append(dict(disk=obj[0],usage=obj[1]))
+    return pack_data("disk_usage",disks)
+
+def get_memary_usage():
+    cout = os.popen("free -m | awk '/buffers\/cache/{print $3,$4}'")
+    used,free = (int(uf.strip()) for uf in cout.read().split())
+    usage = round(used/((used+free)*1.0)*100,2)
+    return pack_data("memary_usage",usage)
 
 
-class EchoClientDatagramProtocol(DatagramProtocol):
-    strings = [
-        "Hello, world!00000000000000000000000000000000000",
-        "What a fine day it is.0000000000000000000000000000000000",
-        "Bye-bye!0000000000000000000000000000",
-        "Bye-bye!0000000000000000000000000000",
-        "Bye-bye!0000000000000000000000000000",
-        "Bye-bye!0000000000000000000000000000"
-    ]
+class MonitorClientDatagramProtocol(DatagramProtocol):
 
     def startProtocol(self):
-        self.transport.connect('127.0.0.1', 9000)
+        self.transport.connect('198.168.8.139', 9000)
         self.sendDatagram()
     
     def sendDatagram(self):
-        if len(self.strings):
-            datagram = self.strings.pop(0)
-            self.transport.write(zlib.compress(json.dumps(dict(value=datagram))))
-        else:
-            reactor.stop()
+        while True:
+            time.sleep(5)
+            self.transport.write(get_uptime())
+            self.transport.write(get_disk_usage())
+            self.transport.write(get_memary_usage())
+
 
     def datagramReceived(self, datagram, host):
         print 'Datagram received: ', repr(datagram)
-        self.sendDatagram()
 
-    def connectionLost(self, reason):
-        print 'lost'
 
     def connectionRefused(self):
-        print 'refund wait 2 second and retry'
-        time.sleep(2)
-        self.sendDatagram()
-
+        print 'connectionRefused'
 
 
 
 def main():
-    protocol = EchoClientDatagramProtocol()
+    protocol = MonitorClientDatagramProtocol()
     reactor.listenUDP(0, protocol)
     reactor.run()
 
