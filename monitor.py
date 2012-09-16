@@ -7,7 +7,7 @@ from PyQt4.QtCore import QSettings,QVariant
 
 config = all_config
 
-settings = QSettings("HKEY_CURRENT_USER//Software//lymonitor",QSettings.NativeFormat);  
+settings = QSettings("HKEY_CURRENT_USER\Software\lymonitor",QSettings.NativeFormat);  
 
 clients = {}
 
@@ -45,12 +45,11 @@ class MainWin(QtGui.QMainWindow,form_class):
         self.set_host()
 
     def set_host(self):
-
         citem = self.host_list.currentItem()
         hostdata = citem.hostdata
         self.host_text.setText(hostdata[0])
         self.port_text.setText(str(hostdata[1]))
-        passwd = settings.value("%s_pw"%hostdata[0],'lingya')
+        passwd = settings.value("%s_pw"%hostdata[0],'none')
         self.passwd_text.setText(passwd.toString())
         self.hostdesc_view.setText(hostdata[2])
         self.current_host = hostdata
@@ -62,6 +61,15 @@ class MainWin(QtGui.QMainWindow,form_class):
         QtGui.QMessageBox.about(self,'info',citem.text())  
 
     @QtCore.pyqtSlot()
+    def on_passwd_text_editingFinished(self):
+        pwd = self.passwd_text.text()
+        if not pwd:
+            return
+        host = self.current_host[0]
+        settings.setValue("%s_pw"%host,QVariant(pwd))
+        settings.sync()
+
+    @QtCore.pyqtSlot()
     def on_host_list_itemSelectionChanged(self):
         self.set_host()
 
@@ -70,7 +78,7 @@ class MainWin(QtGui.QMainWindow,form_class):
         cmdata = self.command_select.itemData(self.command_select.currentIndex())
         cmd = cmdata.toString()
         host,port = self.current_host[0],int(self.current_host[1])
-        passwd = settings.value("%s_pw"%host,'lingya').toString()
+        passwd = self.passwd_text.text()
         timeout = self.timeout_val.value()
         sshc = clients.get(host)    
         if not sshc:  
@@ -78,12 +86,10 @@ class MainWin(QtGui.QMainWindow,form_class):
                 self.statusbar.showMessage(u"正在连接主机.....",timeout*1000)
                 sshc = paramiko.SSHClient()
                 sshc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                print host,port,passwd
                 sshc.connect(host,port,"root",passwd,timeout=timeout)
                 clients[host] = sshc
             except Exception as e:
-                self.statusbar.showMessage(u"连接主机失败.....",5000)
-                self.result_view.append(str(e))
+                self.statusbar.showMessage(u"连接主机失败：%s"%str(e),20000)
                 return
         self.statusbar.showMessage(u"正在执行命令: %s"%cmd,9000)
         stdin, stdout, stderr = sshc.exec_command(cmd)
