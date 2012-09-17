@@ -194,7 +194,7 @@ class MainWin(QtGui.QMainWindow,form_class):
                         u'命令[%s]包含危险字符(%s),是否继续执行'%(cmd,_b),
                         QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
             return ret == QtGui.QMessageBox.Ok 
-        return True
+        return False
 
     def closeEvent(self, event):
         if True:
