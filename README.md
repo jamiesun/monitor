@@ -31,3 +31,6 @@ montior
     )
 
     
+## use pyinstaller build an exe
+
+    python C:\\pyinstaller-2.0\\pyinstaller.py  -F -w  monitor.py
